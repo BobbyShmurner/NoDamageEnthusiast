@@ -32,7 +32,7 @@ namespace NoDamageEnthusiast
 
             Plugin.Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
-            ULTRAKILL.Settings.InitSettings();
+            ULTRAKILL.Settings.CreateSettingsMenu("Gamer");
         }
 
         private void OnDestroy()

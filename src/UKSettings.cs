@@ -2,6 +2,7 @@ using BepInEx.Logging;
 
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 using System;
@@ -10,11 +11,42 @@ namespace ULTRAKILL {
 	public static class Settings {
 		public static ManualLogSource Log { get; private set; }
  
-		public static RectTransform OptionsMenu { get; private set; }
 		public static CustomScrollView OptionsScroll { get; private set; }
+		public static RectTransform OptionsMenu { get; private set; }
  
 		public static GameObject ScrollRectPrefab { get; private set; }
 		public static GameObject ScrollbarPrefab { get; private set; }
+		public static GameObject ButtonPrefab { get; private set; }
+
+		public static CustomScrollView CreateScrollView(RectTransform parent, int width = 620, int height = 520, string name = "Custom Scroll View") {
+			return new CustomScrollView(parent, width, height, name);
+		}
+
+		public static SettingsMenu CreateSettingsMenu(string title, bool forceCaps = true) {
+			return new SettingsMenu(title, forceCaps);
+		}
+
+		public static Button CreateButton(RectTransform parent, string text = "New Button", int width = 160, int height = 50) {
+			GameObject buttonGO = GameObject.Instantiate(ButtonPrefab, parent);
+			buttonGO.name = text;
+
+			RectTransform buttonRect = buttonGO.GetComponent<RectTransform>();
+			buttonRect.sizeDelta = new Vector2(width, height);
+			buttonRect.anchoredPosition = Vector2.zero;
+
+			Button button = buttonGO.GetComponent<Button>();
+			button.onClick.RemoveAllListeners();
+
+			// Disable all the persisten listeners
+			for (int i = 0; i < button.onClick.GetPersistentEventCount(); i++) {
+				button.onClick.SetPersistentListenerState(i, UnityEventCallState.Off);
+			}
+
+			Text buttonText = buttonGO.GetComponentInChildren<Text>();
+			buttonText.text = text;
+
+			return button;
+		}
 
 		public static void InitSettings() {
 			Log = new ManualLogSource("Settings");
@@ -56,6 +88,8 @@ namespace ULTRAKILL {
 			MoveOptionToOptionScroll("Assist");
 			MoveOptionToOptionScroll("Colors");
 			MoveOptionToOptionScroll("Saves");
+
+			ButtonPrefab = OptionsScroll.Content.Find("Gameplay").gameObject;
 
 			Log.LogInfo("Initalised Settings");
 		}
@@ -120,5 +154,24 @@ namespace ULTRAKILL {
 
 		public RectTransform Container {get; private set; }
 		public RectTransform Content {get; private set; }
+	}
+
+	public class SettingsMenu {
+		public SettingsMenu(string title, bool forceCaps = true) {
+			if (Settings.OptionsMenu == null) Settings.InitSettings();
+
+			if (forceCaps) title = title.ToUpper();
+
+			OptionsButton = Settings.CreateButton(Settings.OptionsScroll.Content, title, 160, 50);
+		}
+
+		public void SetTitle(string title, bool forceCaps = true) {
+			if (forceCaps) title = title.ToUpper();
+			OptionsButton.GetComponentInChildren<Text>().text = title;
+		}
+
+		public CustomScrollView ScrollView {get; private set; }
+		public Button OptionsButton {get; private set; }
+		public Text Title {get; private set; }
 	}
 }
