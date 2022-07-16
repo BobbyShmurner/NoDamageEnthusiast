@@ -4,6 +4,8 @@ using BepInEx.Configuration;
 
 using HarmonyLib;
 
+using ULTRAINTERFACE;
+
 namespace NoDamageEnthusiast
 {
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
@@ -32,7 +34,7 @@ namespace NoDamageEnthusiast
 
             Plugin.Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
-            ULTRAKILL.Settings.CreateSettingsMenu("Gamer");
+            SettingsMenu settingsMenu = Settings.CreateSettingsMenu("No Damage");
         }
 
         private void OnDestroy()
