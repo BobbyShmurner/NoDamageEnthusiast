@@ -1,4 +1,5 @@
 using BepInEx.Logging;
+using BepInEx.Configuration;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -117,6 +118,8 @@ namespace ULTRAINTERFACE {
 		}
 
 		public static void Unload() {
+			SceneManager.sceneLoaded -= SetupUI;
+
 			Options.Unload();
 		}
 
@@ -176,8 +179,6 @@ namespace ULTRAINTERFACE {
 			}
 
 			TextPrefab = Options.OptionsMenu.Find("Gameplay Options").Find("Text").gameObject;
-			Log.LogInfo($"Options.OptionsScroll: {Options.OptionsScroll}");
-			Log.LogInfo($"Options.OptionsScroll.Content: {Options.OptionsScroll.Content}");
 			ButtonPrefab = Options.OptionsScroll.Content.Find("Gameplay").gameObject;
 
 			// Create Registered Menus
@@ -187,7 +188,7 @@ namespace ULTRAINTERFACE {
 				Options.CreateOptionsMenu(menuId, false);
 			}
 
-			Log.LogInfo("Initalised Options");
+			Log.LogInfo($"Initalised Options");
 		}
 	}
 
@@ -213,8 +214,7 @@ namespace ULTRAINTERFACE {
 		public static OptionsMenu CreateOptionsMenu(string title, bool forceCaps = true) {
 			if (OptionsMenu == null) UI.Init();
 			if (forceCaps) title = title.ToUpper();
-
-			Options.RegisteredMenus.Add(title, new List<Action<OptionsMenu>>());
+			if (!Options.RegisteredMenus.ContainsKey(title)) Options.RegisteredMenus.Add(title, new List<Action<OptionsMenu>>());
 
 			CustomScrollView scrollView = UI.CreateScrollView(Options.OptionsMenu, 620, 520, TextAnchor.MiddleCenter, CultureInfo.InvariantCulture.TextInfo.ToTitleCase(title.ToLower()) + " Options");
 			Button optionsButton = UI.CreateButton(Options.OptionsScroll.Content, title, 160, 50);
@@ -273,16 +273,18 @@ namespace ULTRAINTERFACE {
 		internal static void Unload() {
 			RegisteredMenus.Clear();
 
-			while (Options.OptionsScroll.Content.childCount > 0) {
-				Transform buttonTrans = Options.OptionsScroll.Content.GetChild(0);
-				buttonTrans.SetParent(Options.OptionsMenu, false);
+			if (OptionsScroll != null) {
+				while (OptionsScroll.Content.childCount > 0) {
+					Transform buttonTrans = OptionsScroll.Content.GetChild(0);
+					buttonTrans.SetParent(OptionsMenu, false);
 
-				Button button = buttonTrans.GetComponent<Button>();
-				if (button) button.onClick.RemoveAllListeners();
+					Button button = buttonTrans.GetComponent<Button>();
+					if (button) button.onClick.RemoveAllListeners();
+				}
+				GameObject.Destroy(OptionsScroll.gameObject);
 			}
-			GameObject.Destroy(Options.OptionsScroll.gameObject);
 
-			foreach(OptionsMenu menu in GameObject.FindObjectsOfType<OptionsMenu>()) {
+			foreach (OptionsMenu menu in Resources.FindObjectsOfTypeAll<OptionsMenu>()) {
 				GameObject.Destroy(GameObject.Find(menu.gameObject.name.Replace(" Options", "")));
 				GameObject.Destroy(menu.gameObject);
 			}
