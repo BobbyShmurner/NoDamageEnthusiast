@@ -7,6 +7,9 @@ using UnityEngine.SceneManagement;
 
 using System;
 using System.Collections;
+using System.Globalization;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ULTRAINTERFACE {
 	public static class UI {
@@ -69,11 +72,12 @@ namespace ULTRAINTERFACE {
 			return scrollView;
 		}
 
-		public static Button CreateButton(RectTransform parent, string text = "New Button", int width = 160, int height = 50) {
+		public static Button CreateButton(RectTransform parent, string text = "New Button", int width = 160, int height = 50, bool forceCaps = true) {
 			if (Log == null) Init();
+			if (forceCaps) text = text.ToUpper();
 
 			GameObject buttonGO = GameObject.Instantiate(ButtonPrefab, parent);
-			buttonGO.name = text;
+			buttonGO.name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(text.ToLower());
 
 			RectTransform buttonRect = buttonGO.GetComponent<RectTransform>();
 			buttonRect.sizeDelta = new Vector2(width, height);
@@ -93,8 +97,9 @@ namespace ULTRAINTERFACE {
 			return button;
 		}
 
-		public static Text CreateText(RectTransform parent, string displayText = "New Text", int fontSize = 24, TextAnchor anchor = TextAnchor.MiddleCenter, int width = 240, int height = 30) {
+		public static Text CreateText(RectTransform parent, string displayText = "New Text", int fontSize = 24, TextAnchor anchor = TextAnchor.MiddleCenter, int width = 240, int height = 30, bool forceCaps = true) {
 			if (Log == null) Init();
+			if (forceCaps) displayText = displayText.ToUpper();
 
 			GameObject textGO = GameObject.Instantiate(TextPrefab, parent);
 			textGO.name = "Text";
@@ -111,6 +116,10 @@ namespace ULTRAINTERFACE {
 			return text;
 		}
 
+		public static void Unload() {
+			Options.Unload();
+		}
+
 		internal static void Init() {
 			Log = new ManualLogSource("ULTRAINTERFACE");
 			BepInEx.Logging.Logger.Sources.Add(Log);
@@ -124,51 +133,90 @@ namespace ULTRAINTERFACE {
 			OptionsMenuToManager optionsMenuToManager = GameObject.FindObjectOfType<OptionsMenuToManager>();
 
 			if (optionsMenuToManager == null) {
-				Log.LogWarning("Failed to find the OptionsMenu, will attempt to setup UI on next scene load");
+				Log.LogError("Failed to find the OptionsMenu, will attempt to setup UI on next scene load");
 				return;
 			}
 
 			Options.OptionsMenu = optionsMenuToManager.transform.Find("OptionsMenu").GetComponent<RectTransform>();
 			
-			// If "Options Scroll View" exists then another mod has set it up already
-			if (Options.OptionsMenu.Find("Options Scroll View")) return;
-
 			ScrollRectPrefab = Options.OptionsMenu.Find("Gameplay Options").Find("Scroll Rect (1)").gameObject;
 			ScrollbarPrefab = Options.OptionsMenu.Find("Gameplay Options").Find("Scrollbar (1)").gameObject;
 
-			Options.OptionsScroll = CreateScrollView(Options.OptionsMenu, 215, 470, TextAnchor.UpperCenter, "Options Scroll View");
-			RectTransform optionsScrollRect = Options.OptionsScroll.GetComponent<RectTransform>();
-			optionsScrollRect.anchorMin = new Vector2(0, 0.5f);
-			optionsScrollRect.anchorMax = new Vector2(0, 0.5f);
-			optionsScrollRect.pivot = new Vector2(0, 0.5f);
-			optionsScrollRect.anchoredPosition = new Vector3(20, 0, 3);
+			// If "Options Scroll View" exists then another mod has set it up already
+			Transform existingMenuTrans = Options.OptionsMenu.Find("Options Scroll View");
+			if (!existingMenuTrans) {
+				Options.OptionsScroll = CreateScrollView(Options.OptionsMenu, 215, 470, TextAnchor.UpperCenter, "Options Scroll View");
+				RectTransform optionsScrollRect = Options.OptionsScroll.GetComponent<RectTransform>();
+				optionsScrollRect.anchorMin = new Vector2(0, 0.5f);
+				optionsScrollRect.anchorMax = new Vector2(0, 0.5f);
+				optionsScrollRect.pivot = new Vector2(0, 0.5f);
+				optionsScrollRect.anchoredPosition = new Vector3(20, 0, 3);
 
-			// Move Buttons to the scroll view
-			Options.MoveOptionToOptionScroll("Gameplay");
-			Options.MoveOptionToOptionScroll("Controls");
-			Options.MoveOptionToOptionScroll("Video");
-			Options.MoveOptionToOptionScroll("Audio");
-			Options.MoveOptionToOptionScroll("HUD");
-			Options.MoveOptionToOptionScroll("Assist");
-			Options.MoveOptionToOptionScroll("Colors");
-			Options.MoveOptionToOptionScroll("Saves");
+				// Move Buttons to the scroll view
+				Options.MoveOptionToOptionScroll("Gameplay");
+				Options.MoveOptionToOptionScroll("Controls");
+				Options.MoveOptionToOptionScroll("Video");
+				Options.MoveOptionToOptionScroll("Audio");
+				Options.MoveOptionToOptionScroll("HUD");
+				Options.MoveOptionToOptionScroll("Assist");
+				Options.MoveOptionToOptionScroll("Colors");
+				Options.MoveOptionToOptionScroll("Saves");
+			} else {
+				Options.OptionsScroll = existingMenuTrans.GetComponent<CustomScrollView>();
+
+				if (Options.OptionsScroll == null) {
+					Options.OptionsScroll = existingMenuTrans.gameObject.AddComponent<CustomScrollView>();
+
+					Options.OptionsScroll.Init(
+						existingMenuTrans.GetChild(0).GetChild(0).GetComponent<RectTransform>(),
+						existingMenuTrans.GetChild(0).GetComponent<ScrollRect>(),
+						existingMenuTrans.GetChild(1).GetComponent<Scrollbar>()
+					);
+				}
+			}
 
 			TextPrefab = Options.OptionsMenu.Find("Gameplay Options").Find("Text").gameObject;
+			Log.LogInfo($"Options.OptionsScroll: {Options.OptionsScroll}");
+			Log.LogInfo($"Options.OptionsScroll.Content: {Options.OptionsScroll.Content}");
 			ButtonPrefab = Options.OptionsScroll.Content.Find("Gameplay").gameObject;
+
+			// Create Registered Menus
+			if (Options.RegisteredMenus == null) Options.RegisteredMenus = new Dictionary<string, List<Action<OptionsMenu>>>();
+
+			foreach (string menuId in Options.RegisteredMenus.Keys.ToList()) {
+				Options.CreateOptionsMenu(menuId, false);
+			}
 
 			Log.LogInfo("Initalised Options");
 		}
 	}
 
 	public static class Options {
+		public static Dictionary<string, List<Action<OptionsMenu>>> RegisteredMenus { get; internal set; }
 		public static CustomScrollView OptionsScroll { get; internal set; }
 		public static RectTransform OptionsMenu { get; internal set; }
+
+		public static OptionsMenu CreateOptionsMenu(string title, Action<OptionsMenu> createAction, bool forceCaps = true) {
+			OptionsMenu optionsMenu = CreateOptionsMenu(title, forceCaps);
+			optionsMenu.RegisterCreateAction(createAction);
+
+			return optionsMenu;
+		}
+
+		public static OptionsMenu CreateOptionsMenu(string title, List<Action<OptionsMenu>> createActions, bool forceCaps = true) {
+			OptionsMenu optionsMenu = CreateOptionsMenu(title, forceCaps);
+			optionsMenu.RegisterCreateActions(createActions);
+
+			return optionsMenu;
+		}
 
 		public static OptionsMenu CreateOptionsMenu(string title, bool forceCaps = true) {
 			if (OptionsMenu == null) UI.Init();
 			if (forceCaps) title = title.ToUpper();
 
-			CustomScrollView scrollView = UI.CreateScrollView(Options.OptionsMenu, 620, 520, TextAnchor.MiddleCenter, title + " Options");
+			Options.RegisteredMenus.Add(title, new List<Action<OptionsMenu>>());
+
+			CustomScrollView scrollView = UI.CreateScrollView(Options.OptionsMenu, 620, 520, TextAnchor.MiddleCenter, CultureInfo.InvariantCulture.TextInfo.ToTitleCase(title.ToLower()) + " Options");
 			Button optionsButton = UI.CreateButton(Options.OptionsScroll.Content, title, 160, 50);
 			GameObject.Destroy(scrollView.GetComponent<HorizontalLayoutGroup>());
 			scrollView.gameObject.AddComponent<HudOpenEffect>();
@@ -204,7 +252,7 @@ namespace ULTRAINTERFACE {
 				
 				button.onClick.AddListener(() => { scrollView.gameObject.SetActive(false); });
 			}
-			
+
 			// Disable the other options when this button is clicked
 			for (int i = 0; i < OptionsMenu.childCount; i++) {
 				Transform child = OptionsMenu.GetChild(i);
@@ -217,9 +265,27 @@ namespace ULTRAINTERFACE {
 			optionsButtonText.text = title;
 
 			OptionsMenu optionsMenu = scrollView.gameObject.AddComponent<OptionsMenu>();
-			optionsMenu.Init(scrollView, optionsButton, optionsButtonText);
+			optionsMenu.Init(title, scrollView, optionsButton, optionsButtonText);
 
 			return optionsMenu;
+		}
+
+		internal static void Unload() {
+			RegisteredMenus.Clear();
+
+			while (Options.OptionsScroll.Content.childCount > 0) {
+				Transform buttonTrans = Options.OptionsScroll.Content.GetChild(0);
+				buttonTrans.SetParent(Options.OptionsMenu, false);
+
+				Button button = buttonTrans.GetComponent<Button>();
+				if (button) button.onClick.RemoveAllListeners();
+			}
+			GameObject.Destroy(Options.OptionsScroll.gameObject);
+
+			foreach(OptionsMenu menu in GameObject.FindObjectsOfType<OptionsMenu>()) {
+				GameObject.Destroy(GameObject.Find(menu.gameObject.name.Replace(" Options", "")));
+				GameObject.Destroy(menu.gameObject);
+			}
 		}
 
 		internal static void Init(RectTransform optionsMenu, CustomScrollView optionsScroll) {
@@ -254,13 +320,20 @@ namespace ULTRAINTERFACE {
 	}
 
 	public class OptionsMenu : MonoBehaviour {
+		public List<Action<OptionsMenu>> CreateActions { 
+			get {
+				return Options.RegisteredMenus[ID];
+			}
+		}
+
 		public CustomScrollView ScrollView { get; private set; }
 		public Button OptionsButton { get; private set; }
 		public Text Title { get; private set; }
 
 		public bool HasBeenShown { get; private set; }
+		public string ID { get; private set; }
 
-		internal void Init (CustomScrollView scrollView, Button optionsButton, Text title) {
+		internal void Init (string id, CustomScrollView scrollView, Button optionsButton, Text title) {
 			if (ScrollView != null) {
 				UI.Log.LogError($"Options Menu \"{gameObject.name}\" already initalised, returning...");
 				return;
@@ -269,14 +342,38 @@ namespace ULTRAINTERFACE {
 			this.ScrollView = scrollView;
 			this.OptionsButton = optionsButton;
 			this.Title = title;
+			this.ID = id;
 
 			this.HasBeenShown = false;
+
+			foreach (Action<OptionsMenu> action in CreateActions) {
+				action(this);
+			}
+		}
+
+		public void RegisterCreateActions(List<Action<OptionsMenu>> actions, bool executeOnRegister = true) {
+			foreach (var action in actions) RegisterCreateAction(action, executeOnRegister);
+		}
+
+		public void RegisterCreateAction(Action<OptionsMenu> action, bool executeOnRegister = true) {
+			CreateActions.Add(action);
+
+			if (executeOnRegister) action(this);
+		}
+
+		public void UnregisterCreateAction(Action<OptionsMenu> action) {
+			CreateActions.Remove(action);
+		}
+
+		public void UnregisterCreateAction(int index) {
+			CreateActions.RemoveAt(index);
 		}
 
 		public void ScrollToTop() {
-			UI.Log.LogInfo($"Scrolling To Top... Content Height: {ScrollView.Content.sizeDelta.y}, ScrollRect Height: {ScrollView.ScrollRect.GetComponent<RectTransform>().sizeDelta.y}, Value: {(ScrollView.Content.sizeDelta.y - ScrollView.ScrollRect.GetComponent<RectTransform>().sizeDelta.y) * 0.5f}");
+			float movementVal = (ScrollView.Content.sizeDelta.y - ScrollView.ScrollRect.GetComponent<RectTransform>().sizeDelta.y) * -0.5f;
+			if (movementVal > 0) return;
 
-			ScrollView.Content.anchoredPosition = new Vector2(ScrollView.Content.anchoredPosition.x, (ScrollView.Content.sizeDelta.y - ScrollView.ScrollRect.GetComponent<RectTransform>().sizeDelta.y) * -0.5f);
+			ScrollView.Content.anchoredPosition = new Vector2(ScrollView.Content.anchoredPosition.x, movementVal);
 		}
 
 		public void SetTitle(string titleText, bool forceCaps = true) {

@@ -34,12 +34,17 @@ namespace NoDamageEnthusiast
 
             Plugin.Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
-            OptionsMenu optionsMenu = Options.CreateOptionsMenu("No Damage");
+            OptionsMenu optionsMenu = Options.CreateOptionsMenu("No Damage", (menu) => {
+                UI.CreateText(menu.ScrollView.Content, "gamer settings");
+                UI.CreateButton(menu.ScrollView.Content, "gamer");
+                UI.CreateButton(menu.ScrollView.Content, "gamer2");
+            });
         }
 
         private void OnDestroy()
         {
             harmony?.UnpatchSelf();
+            UI.Unload();
         }
     }
 }
