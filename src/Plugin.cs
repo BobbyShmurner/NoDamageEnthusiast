@@ -34,7 +34,34 @@ namespace NoDamageEnthusiast
 
             Plugin.Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
-            SettingsMenu settingsMenu = Settings.CreateSettingsMenu("No Damage");
+            OptionsMenu optionsMenu = Options.CreateSettingsMenu("No Damage");
+
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
         }
 
         private void OnDestroy()
