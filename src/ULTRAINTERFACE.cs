@@ -6,6 +6,7 @@ using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 using System;
+using System.Collections;
 
 namespace ULTRAINTERFACE {
 	public static class UI {
@@ -155,7 +156,7 @@ namespace ULTRAINTERFACE {
 			TextPrefab = Options.OptionsMenu.Find("Gameplay Options").Find("Text").gameObject;
 			ButtonPrefab = Options.OptionsScroll.Content.Find("Gameplay").gameObject;
 
-			Log.LogInfo("Initalised Settings");
+			Log.LogInfo("Initalised Options");
 		}
 	}
 
@@ -163,7 +164,7 @@ namespace ULTRAINTERFACE {
 		public static CustomScrollView OptionsScroll { get; internal set; }
 		public static RectTransform OptionsMenu { get; internal set; }
 
-		public static OptionsMenu CreateSettingsMenu(string title, bool forceCaps = true) {
+		public static OptionsMenu CreateOptionsMenu(string title, bool forceCaps = true) {
 			if (OptionsMenu == null) UI.Init();
 			if (forceCaps) title = title.ToUpper();
 
@@ -215,10 +216,10 @@ namespace ULTRAINTERFACE {
 			Text optionsButtonText = optionsButton.GetComponentInChildren<Text>();
 			optionsButtonText.text = title;
 
-			OptionsMenu settingsMenu = scrollView.gameObject.AddComponent<OptionsMenu>();
-			settingsMenu.Init(scrollView, optionsButton, optionsButtonText);
+			OptionsMenu optionsMenu = scrollView.gameObject.AddComponent<OptionsMenu>();
+			optionsMenu.Init(scrollView, optionsButton, optionsButtonText);
 
-			return settingsMenu;
+			return optionsMenu;
 		}
 
 		internal static void Init(RectTransform optionsMenu, CustomScrollView optionsScroll) {
@@ -236,6 +237,10 @@ namespace ULTRAINTERFACE {
 	}
 
 	public class CustomScrollView : MonoBehaviour {
+		public RectTransform Content { get; private set; }
+		public ScrollRect ScrollRect { get; private set; }
+		public Scrollbar Scrollbar { get; private set; }
+
 		internal void Init(RectTransform content, ScrollRect scrollRect, Scrollbar scrollbar) {
 			if (Content != null) {
 				UI.Log.LogError($"Scroll View \"{gameObject.name}\" already initalised, returning...");
@@ -246,22 +251,32 @@ namespace ULTRAINTERFACE {
 			this.ScrollRect = scrollRect;
 			this.Scrollbar = scrollbar;
 		}
-
-		public RectTransform Content {get; private set; }
-		public ScrollRect ScrollRect {get; private set; }
-		public Scrollbar Scrollbar {get; private set; }
 	}
 
 	public class OptionsMenu : MonoBehaviour {
+		public CustomScrollView ScrollView { get; private set; }
+		public Button OptionsButton { get; private set; }
+		public Text Title { get; private set; }
+
+		public bool HasBeenShown { get; private set; }
+
 		internal void Init (CustomScrollView scrollView, Button optionsButton, Text title) {
 			if (ScrollView != null) {
-				UI.Log.LogError($"Settings Menu \"{gameObject.name}\" already initalised, returning...");
+				UI.Log.LogError($"Options Menu \"{gameObject.name}\" already initalised, returning...");
 				return;
 			}
 
 			this.ScrollView = scrollView;
 			this.OptionsButton = optionsButton;
 			this.Title = title;
+
+			this.HasBeenShown = false;
+		}
+
+		public void ScrollToTop() {
+			UI.Log.LogInfo($"Scrolling To Top... Content Height: {ScrollView.Content.sizeDelta.y}, ScrollRect Height: {ScrollView.ScrollRect.GetComponent<RectTransform>().sizeDelta.y}, Value: {(ScrollView.Content.sizeDelta.y - ScrollView.ScrollRect.GetComponent<RectTransform>().sizeDelta.y) * 0.5f}");
+
+			ScrollView.Content.anchoredPosition = new Vector2(ScrollView.Content.anchoredPosition.x, (ScrollView.Content.sizeDelta.y - ScrollView.ScrollRect.GetComponent<RectTransform>().sizeDelta.y) * -0.5f);
 		}
 
 		public void SetTitle(string titleText, bool forceCaps = true) {
@@ -271,8 +286,16 @@ namespace ULTRAINTERFACE {
 			Title.text = $"--{titleText}--";
 		}
 
-		public CustomScrollView ScrollView {get; private set; }
-		public Button OptionsButton {get; private set; }
-		public Text Title {get; private set; }
+		void OnEnable() {
+			if (!HasBeenShown) {
+				HasBeenShown = true;
+				StartCoroutine(ScrollAfterFrame());
+			}
+		}
+
+		IEnumerator ScrollAfterFrame() {
+			yield return null;
+			ScrollToTop();
+		}
 	}
 }

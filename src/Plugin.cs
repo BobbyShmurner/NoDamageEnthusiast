@@ -34,34 +34,7 @@ namespace NoDamageEnthusiast
 
             Plugin.Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
-            OptionsMenu optionsMenu = Options.CreateSettingsMenu("No Damage");
-
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
-            UI.CreateButton(optionsMenu.ScrollView.Content, "gamer");
+            OptionsMenu optionsMenu = Options.CreateOptionsMenu("No Damage");
         }
 
         private void OnDestroy()
