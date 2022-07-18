@@ -127,21 +127,22 @@ namespace ULTRAINTERFACE {
 			Options.Unload();
 		}
 
-		internal static void Init() {
+		internal static bool Init() {
 			Log = new ManualLogSource("ULTRAINTERFACE");
 			BepInEx.Logging.Logger.Sources.Add(Log);
 
 			SceneManager.sceneLoaded += SetupUI;
-			SetupUI();
+			return SetupUI();
 		}
 
 		static void SetupUI(Scene scene, LoadSceneMode loadSceneMode) { SetupUI(); }
-		static void SetupUI() {
-			OptionsMenuToManager optionsMenuToManager = GameObject.FindObjectOfType<OptionsMenuToManager>();
+		static bool SetupUI() {
+			if (Options.RegisteredMenus == null) Options.RegisteredMenus = new Dictionary<string, OptionsMenuEvents>();
 
+			OptionsMenuToManager optionsMenuToManager = GameObject.FindObjectOfType<OptionsMenuToManager>();
 			if (optionsMenuToManager == null) {
 				Log.LogError("Failed to find the OptionsMenu, will attempt to setup UI on next scene load");
-				return;
+				return false;
 			}
 
 			Options.OptionsMenu = optionsMenuToManager.transform.Find("OptionsMenu").GetComponent<RectTransform>();
@@ -186,13 +187,12 @@ namespace ULTRAINTERFACE {
 			ButtonPrefab = Options.OptionsScroll.Content.Find("Gameplay").gameObject;
 
 			// Create Registered Menus
-			if (Options.RegisteredMenus == null) Options.RegisteredMenus = new Dictionary<string, OptionsMenuEvents>();
-
 			foreach (string menuId in Options.RegisteredMenus.Keys.ToList()) {
 				Options.CreateOptionsMenu(menuId, false);
 			}
 
 			Log.LogInfo($"Initalised Options");
+			return true;
 		}
 	}
 
@@ -204,92 +204,106 @@ namespace ULTRAINTERFACE {
 		public static OptionsMenu CreateOptionsMenu(string title, Action<OptionsMenu> createAction, bool forceCaps = true) {
 			OptionsMenu optionsMenu = CreateOptionsMenu(title, forceCaps);
 
-			optionsMenu.Events.Create.AddAndExecute(createAction, optionsMenu);
-			optionsMenu.UpdateNavigation();
+			if (optionsMenu.ScrollView != null) {
+				optionsMenu.Events.Create.AddAndExecute(createAction, optionsMenu);
+				optionsMenu.UpdateNavigation();
+			} else {
+				optionsMenu.Events.Create.Add(createAction);
+			}
 
 			return optionsMenu;
 		}
 
 		public static OptionsMenu CreateOptionsMenu(string title, bool forceCaps = true) {
-			if (OptionsMenu == null) UI.Init();
+			bool createUI = true;
+			if (OptionsMenu == null) createUI = UI.Init();
 			if (forceCaps) title = title.ToUpper();
 			if (!Options.RegisteredMenus.ContainsKey(title)) Options.RegisteredMenus.Add(title, new OptionsMenuEvents());
 
-			CustomScrollView scrollView = UI.CreateScrollView(Options.OptionsMenu, 620, 520, TextAnchor.MiddleCenter, CultureInfo.InvariantCulture.TextInfo.ToTitleCase(title.ToLower()) + " Options");
-			Button optionsButton = UI.CreateButton(Options.OptionsScroll.Content, title, 160, 50);
-			GameObject.Destroy(scrollView.GetComponent<HorizontalLayoutGroup>());
-			scrollView.gameObject.AddComponent<HudOpenEffect>();
+			if (createUI) {
+				CustomScrollView scrollView = UI.CreateScrollView(Options.OptionsMenu, 620, 520, TextAnchor.MiddleCenter, CultureInfo.InvariantCulture.TextInfo.ToTitleCase(title.ToLower()) + " Options");
+				Button optionsButton = UI.CreateButton(Options.OptionsScroll.Content, title, 160, 50);
+				GameObject.Destroy(scrollView.GetComponent<HorizontalLayoutGroup>());
+				scrollView.gameObject.AddComponent<HudOpenEffect>();
 
-			Text titleText = UI.CreateText(scrollView.GetComponent<RectTransform>(), $"--{title}--");
-			titleText.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -75);
-			titleText.transform.SetAsFirstSibling();
+				Text titleText = UI.CreateText(scrollView.GetComponent<RectTransform>(), $"--{title}--");
+				titleText.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -75);
+				titleText.transform.SetAsFirstSibling();
 
-			RectTransform scrollViewRect = scrollView.GetComponent<RectTransform>();
-			scrollViewRect.anchoredPosition = Vector2.zero;
-			scrollViewRect.gameObject.SetActive(false);
-			scrollViewRect.sizeDelta = Vector2.zero;
-			scrollViewRect.anchorMin = Vector2.zero;
-			scrollViewRect.anchorMax = Vector2.one;
-			scrollViewRect.pivot = Vector2.one / 2f;
+				RectTransform scrollViewRect = scrollView.GetComponent<RectTransform>();
+				scrollViewRect.anchoredPosition = Vector2.zero;
+				scrollViewRect.gameObject.SetActive(false);
+				scrollViewRect.sizeDelta = Vector2.zero;
+				scrollViewRect.anchorMin = Vector2.zero;
+				scrollViewRect.anchorMax = Vector2.one;
+				scrollViewRect.pivot = Vector2.one / 2f;
 
-			RectTransform scrollRectRect = scrollView.ScrollRect.GetComponent<RectTransform>();
-			scrollRectRect.anchoredPosition = new Vector2(0, -50);
+				RectTransform scrollRectRect = scrollView.ScrollRect.GetComponent<RectTransform>();
+				scrollRectRect.anchoredPosition = new Vector2(0, -50);
 
-			RectTransform scrollbarRect = scrollView.Scrollbar.GetComponent<RectTransform>();
-			scrollbarRect.anchoredPosition = new Vector2(330, -50);
+				RectTransform scrollbarRect = scrollView.Scrollbar.GetComponent<RectTransform>();
+				scrollbarRect.anchoredPosition = new Vector2(330, -50);
 
-			RectTransform scrollRectContentRect = scrollView.Content.GetComponent<RectTransform>();
-			scrollRectContentRect.anchorMin = new Vector2(0.5f, 0.5f);
-			scrollRectContentRect.anchorMax = new Vector2(0.5f, 0.5f);
-			scrollRectContentRect.pivot = new Vector2(0.5f, 0.5f);
-			scrollRectContentRect.anchoredPosition = Vector2.zero;
+				RectTransform scrollRectContentRect = scrollView.Content.GetComponent<RectTransform>();
+				scrollRectContentRect.anchorMin = new Vector2(0.5f, 0.5f);
+				scrollRectContentRect.anchorMax = new Vector2(0.5f, 0.5f);
+				scrollRectContentRect.pivot = new Vector2(0.5f, 0.5f);
+				scrollRectContentRect.anchoredPosition = Vector2.zero;
 
-			// Disable these options when clicked on the other buttons
-			for (int i = 0; i < OptionsScroll.Content.transform.childCount; i++) {
-				Button button = OptionsScroll.Content.transform.GetChild(i).GetComponent<Button>();
-				if (button == null || button == optionsButton) continue;
-				
-				button.onClick.AddListener(() => { scrollView.gameObject.SetActive(false); });
+				// Disable these options when clicked on the other buttons
+				for (int i = 0; i < OptionsScroll.Content.transform.childCount; i++) {
+					Button button = OptionsScroll.Content.transform.GetChild(i).GetComponent<Button>();
+					if (button == null || button == optionsButton) continue;
+					
+					button.onClick.AddListener(() => { scrollView.gameObject.SetActive(false); });
+				}
+
+				// Disable the other options when this button is clicked
+				for (int i = 0; i < OptionsMenu.childCount; i++) {
+					Transform child = OptionsMenu.GetChild(i);
+					if (!child.name.EndsWith(" Options")) continue;
+
+					optionsButton.onClick.AddListener(() => { child.gameObject.SetActive(child == scrollView.transform); });
+				}
+
+				GamepadObjectSelector scrollViewGOS = scrollView.gameObject.AddComponent<GamepadObjectSelector>();
+				typeof(GamepadObjectSelector).GetField("selectOnEnable", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(scrollViewGOS, false);
+				typeof(GamepadObjectSelector).GetField("dontMarkTop", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(scrollViewGOS, true);
+
+				BackSelectEvent scrollViewBSE = scrollView.gameObject.AddComponent<BackSelectEvent>();
+
+				UnityEvent onBack = new UnityEvent();
+				onBack.AddListener(() => { scrollViewGOS.PopTop(); } );
+				typeof(BackSelectEvent).GetField("m_OnBack", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(scrollViewBSE, onBack);
+
+				optionsButton.onClick.AddListener(() => { scrollViewGOS.Activate(); });
+				optionsButton.onClick.AddListener(() => { scrollViewGOS.SetTop(); });
+
+				Text optionsButtonText = optionsButton.GetComponentInChildren<Text>();
+				optionsButtonText.text = title;
+
+				OptionsMenu optionsMenu = scrollView.gameObject.AddComponent<OptionsMenu>();
+				optionsMenu.Init(title, scrollView, optionsButton, optionsButtonText);
+
+				optionsMenu.Events.LateCreate.Add((menu) => {
+					Selectable firstSelectable = menu.ScrollView.Content.GetComponentInChildren<Selectable>();
+
+					typeof(GamepadObjectSelector).GetField("target", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(menu.ScrollView.GetComponent<GamepadObjectSelector>(), firstSelectable ? firstSelectable.gameObject : null);
+				});
+
+				optionsMenu.Events.FirstShown.Add((menu) => { menu.ScrollToTop(); });
+
+				UpdateOptionsScrollNavigation();
+
+				return optionsMenu;
+			} else {
+				UI.Log.LogWarning("UI failed to initalise. A empty menu will be created this scene");
+
+				OptionsMenu optionsMenu = new GameObject("Dummy Options Menu", new Type[]{typeof(OptionsMenu)}).GetComponent<OptionsMenu>();
+				optionsMenu.Init(title, null, null, null);
+
+				return optionsMenu;
 			}
-
-			// Disable the other options when this button is clicked
-			for (int i = 0; i < OptionsMenu.childCount; i++) {
-				Transform child = OptionsMenu.GetChild(i);
-				if (!child.name.EndsWith(" Options")) continue;
-
-				optionsButton.onClick.AddListener(() => { child.gameObject.SetActive(child == scrollView.transform); });
-			}
-
-			GamepadObjectSelector scrollViewGOS = scrollView.gameObject.AddComponent<GamepadObjectSelector>();
-			typeof(GamepadObjectSelector).GetField("selectOnEnable", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(scrollViewGOS, false);
-			typeof(GamepadObjectSelector).GetField("dontMarkTop", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(scrollViewGOS, true);
-
-			BackSelectEvent scrollViewBSE = scrollView.gameObject.AddComponent<BackSelectEvent>();
-
-			UnityEvent onBack = new UnityEvent();
-			onBack.AddListener(() => { scrollViewGOS.PopTop(); } );
-			typeof(BackSelectEvent).GetField("m_OnBack", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(scrollViewBSE, onBack);
-
-			optionsButton.onClick.AddListener(() => { scrollViewGOS.Activate(); });
-			optionsButton.onClick.AddListener(() => { scrollViewGOS.SetTop(); });
-
-			Text optionsButtonText = optionsButton.GetComponentInChildren<Text>();
-			optionsButtonText.text = title;
-
-			OptionsMenu optionsMenu = scrollView.gameObject.AddComponent<OptionsMenu>();
-			optionsMenu.Init(title, scrollView, optionsButton, optionsButtonText);
-
-			optionsMenu.Events.LateCreate.Add((menu) => {
-				Selectable firstSelectable = menu.ScrollView.Content.GetComponentInChildren<Selectable>();
-
-				typeof(GamepadObjectSelector).GetField("target", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(menu.ScrollView.GetComponent<GamepadObjectSelector>(), firstSelectable ? firstSelectable.gameObject : null);
-			});
-
-			optionsMenu.Events.FirstShown.Add((menu) => { menu.ScrollToTop(); });
-
-			UpdateOptionsScrollNavigation();
-
-			return optionsMenu;
 		}
 
 		public static void UpdateOptionsScrollNavigation() {
@@ -403,15 +417,20 @@ namespace ULTRAINTERFACE {
 
 			this.HasBeenShown = false;
 
-			foreach (Action<OptionsMenu> action in Events.Create) {
-				action(this);
-			}
-
-			Camera.main.GetComponent<MonoBehaviour>().InvokeNextFrame(() => {
-				foreach (Action<OptionsMenu> action in Events.LateCreate) {
+			// If null, this is a dummy menu
+			if (scrollView != null) {
+				foreach (Action<OptionsMenu> action in Events.Create) {
 					action(this);
 				}
-			});
+
+				Camera.main.GetComponent<MonoBehaviour>().InvokeNextFrame(() => {
+					foreach (Action<OptionsMenu> action in Events.LateCreate) {
+						action(this);
+					}
+					
+					UpdateNavigation();
+				});
+			}
 		}
 
 		public void UpdateNavigation() {
