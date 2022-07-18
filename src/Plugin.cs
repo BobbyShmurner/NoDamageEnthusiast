@@ -48,11 +48,15 @@ namespace NoDamageEnthusiast
                     noDamageButton.GetComponentInChildren<Text>().text = "INSTA-KILL: " + (configNoDamage.Value ? "ON" : "OFF");
                 });
 
+                noDamageButton.gameObject.AddComponent<BackSelectOverride>().Selectable = menu.OptionsButton;
+
                 Button noCheckpointsButton = UI.CreateButton(menu.ScrollView.Content, "CHECKPOINTS: " + (configNoCheckpoints.Value ? "OFF" : "ON"), 250);
                 noCheckpointsButton.onClick.AddListener(() => {
                     configNoCheckpoints.Value = !configNoCheckpoints.Value;
                     noCheckpointsButton.GetComponentInChildren<Text>().text = "CHECKPOINTS: " + (configNoCheckpoints.Value ? "OFF" : "ON");
                 });
+
+                noCheckpointsButton.gameObject.AddComponent<BackSelectOverride>().Selectable = menu.OptionsButton;
 
                 UI.Log.LogInfo($"Created menu");
             });
