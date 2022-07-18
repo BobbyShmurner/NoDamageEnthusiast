@@ -6,6 +6,9 @@ using HarmonyLib;
 
 using ULTRAINTERFACE;
 
+using UnityEngine;
+using UnityEngine.UI;
+
 namespace NoDamageEnthusiast
 {
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
@@ -34,10 +37,24 @@ namespace NoDamageEnthusiast
 
             Plugin.Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
+            // This is just temporary
             OptionsMenu optionsMenu = Options.CreateOptionsMenu("No Damage", (menu) => {
-                UI.CreateText(menu.ScrollView.Content, "gamer settings");
-                UI.CreateButton(menu.ScrollView.Content, "gamer");
-                UI.CreateButton(menu.ScrollView.Content, "gamer2");
+                UI.CreateText(menu.ScrollView.Content, "Please excuse the shitty UI, it will improve eventually", 20, 600);
+                UI.CreateText(menu.ScrollView.Content, "Maybe...", 20);
+
+                Button noDamageButton = UI.CreateButton(menu.ScrollView.Content, "INSTA-KILL: " + (configNoDamage.Value ? "ON" : "OFF"), 250);
+                noDamageButton.onClick.AddListener(() => {
+                    configNoDamage.Value = !configNoDamage.Value;
+                    noDamageButton.GetComponentInChildren<Text>().text = "INSTA-KILL: " + (configNoDamage.Value ? "ON" : "OFF");
+                });
+
+                Button noCheckpointsButton = UI.CreateButton(menu.ScrollView.Content, "CHECKPOINTS: " + (configNoCheckpoints.Value ? "OFF" : "ON"), 250);
+                noCheckpointsButton.onClick.AddListener(() => {
+                    configNoCheckpoints.Value = !configNoCheckpoints.Value;
+                    noCheckpointsButton.GetComponentInChildren<Text>().text = "CHECKPOINTS: " + (configNoCheckpoints.Value ? "OFF" : "ON");
+                });
+
+                UI.Log.LogInfo($"Created menu");
             });
         }
 
