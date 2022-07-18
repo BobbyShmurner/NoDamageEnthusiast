@@ -416,12 +416,9 @@ namespace ULTRAINTERFACE {
 
 		public void UpdateNavigation() {
 			Selectable[] selectables = ScrollView.Content.GetComponentsInChildren<Button>();
-			UI.Log.LogInfo($"GO: {gameObject.name}, ScrollView: ({ScrollView.name}, {ScrollView.transform.parent}), ScrollView.Content: ({ScrollView.Content.name}, {ScrollView.Content.transform.parent})");
 
 			for (int i = 0; i < selectables.Length; i++) {
 				Selectable selectable = selectables[i];
-
-				UI.Log.LogInfo($"[{gameObject.name}] [{i}] {selectable.gameObject.name}, {selectable.transform.parent.name} -> {selectable.transform.parent.parent.name} -> {selectable.transform.parent.parent.parent.name} -> {selectable.transform.parent.parent.parent.parent.name}");
 
 				Navigation nav = new Navigation();
  				nav.mode = Navigation.Mode.Explicit;
