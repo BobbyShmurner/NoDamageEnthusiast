@@ -137,7 +137,7 @@ namespace ULTRAINTERFACE {
 
 		static void SetupUI(Scene scene, LoadSceneMode loadSceneMode) { SetupUI(); }
 		static bool SetupUI() {
-			if (Options.RegisteredMenus == null) Options.RegisteredMenus = new Dictionary<string, OptionsMenuEvents>();
+			if (Options.RegisteredMenus == null) Options.RegisteredMenus = new Dictionary<string, OptionsMenuCreateInfo>();
 
 			OptionsMenuToManager optionsMenuToManager = GameObject.FindObjectOfType<OptionsMenuToManager>();
 			if (optionsMenuToManager == null) {
@@ -187,8 +187,8 @@ namespace ULTRAINTERFACE {
 			ButtonPrefab = Options.OptionsScroll.Content.Find("Gameplay").gameObject;
 
 			// Create Registered Menus
-			foreach (string menuId in Options.RegisteredMenus.Keys.ToList()) {
-				Options.CreateOptionsMenu(menuId, false);
+			foreach (OptionsMenuCreateInfo createInfo in Options.RegisteredMenus.Values.ToList()) {
+				Options.CreateOptionsMenu(createInfo.ID);
 			}
 
 			Log.LogInfo($"Initalised Options");
@@ -197,12 +197,12 @@ namespace ULTRAINTERFACE {
 	}
 
 	public static class Options {
-		public static Dictionary<string, OptionsMenuEvents> RegisteredMenus { get; internal set; }
+		public static Dictionary<string, OptionsMenuCreateInfo> RegisteredMenus { get; internal set; }
 		public static CustomScrollView OptionsScroll { get; internal set; }
 		public static RectTransform OptionsMenu { get; internal set; }
 
-		public static OptionsMenu CreateOptionsMenu(string title, Action<OptionsMenu> createAction, bool forceCaps = true) {
-			OptionsMenu optionsMenu = CreateOptionsMenu(title, forceCaps);
+		public static OptionsMenu CreateOptionsMenu(string title, Action<OptionsMenu> createAction, string buttonText = "", bool forceCaps = true) {
+			OptionsMenu optionsMenu = CreateOptionsMenu(title, buttonText, forceCaps, "");
 
 			if (optionsMenu.ScrollView != null) {
 				optionsMenu.Events.Create.AddAndExecute(createAction, optionsMenu);
@@ -214,11 +214,31 @@ namespace ULTRAINTERFACE {
 			return optionsMenu;
 		}
 
-		public static OptionsMenu CreateOptionsMenu(string title, bool forceCaps = true) {
+		public static OptionsMenu CreateOptionsMenu(string title, string buttonText = "", bool forceCaps = true) {
+			return CreateOptionsMenu(title, buttonText, forceCaps, "");
+		}
+
+		public static OptionsMenu CreateOptionsMenu(string id) {
+			if (Options.RegisteredMenus == null || !Options.RegisteredMenus.ContainsKey(id)) {
+				UI.Log.LogError("Could not create menu with id of \"{id}\": No menu with that id has been registered!");
+				return null;
+			}
+
+			OptionsMenuCreateInfo createInfo = Options.RegisteredMenus[id];
+			return CreateOptionsMenu(createInfo.Title, createInfo.ButtonText, false, id);
+		}
+
+		static OptionsMenu CreateOptionsMenu(string title, string buttonText, bool forceCaps, string id) {
 			bool createUI = true;
+
 			if (OptionsMenu == null) createUI = UI.Init();
-			if (forceCaps) title = title.ToUpper();
-			if (!Options.RegisteredMenus.ContainsKey(title)) Options.RegisteredMenus.Add(title, new OptionsMenuEvents());
+			if (forceCaps) {
+				title = title.ToUpper();
+				buttonText = buttonText.ToUpper();
+			}
+			if (id == "") id = title.ToLower().Replace(' ', '_');
+			if (buttonText == "") buttonText = title;
+			if (!Options.RegisteredMenus.ContainsKey(id)) Options.RegisteredMenus.Add(id, new OptionsMenuCreateInfo(id, title, buttonText));
 
 			if (createUI) {
 				CustomScrollView scrollView = UI.CreateScrollView(Options.OptionsMenu, 620, 520, TextAnchor.MiddleCenter, CultureInfo.InvariantCulture.TextInfo.ToTitleCase(title.ToLower()) + " Options");
@@ -226,7 +246,7 @@ namespace ULTRAINTERFACE {
 				GameObject.Destroy(scrollView.GetComponent<HorizontalLayoutGroup>());
 				scrollView.gameObject.AddComponent<HudOpenEffect>();
 
-				Text titleText = UI.CreateText(scrollView.GetComponent<RectTransform>(), $"--{title}--");
+				Text titleText = UI.CreateText(scrollView.GetComponent<RectTransform>(), $"--{title}--", 24, 620);
 				titleText.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -75);
 				titleText.transform.SetAsFirstSibling();
 
@@ -280,10 +300,10 @@ namespace ULTRAINTERFACE {
 				optionsButton.onClick.AddListener(() => { scrollViewGOS.SetTop(); });
 
 				Text optionsButtonText = optionsButton.GetComponentInChildren<Text>();
-				optionsButtonText.text = title;
+				optionsButtonText.text = buttonText;
 
 				OptionsMenu optionsMenu = scrollView.gameObject.AddComponent<OptionsMenu>();
-				optionsMenu.Init(title, scrollView, optionsButton, optionsButtonText);
+				optionsMenu.Init(id, scrollView, optionsButton, optionsButtonText);
 
 				optionsMenu.Events.LateCreate.Add((menu) => {
 					Selectable firstSelectable = menu.ScrollView.Content.GetComponentInChildren<Selectable>();
@@ -300,7 +320,7 @@ namespace ULTRAINTERFACE {
 				UI.Log.LogWarning("UI failed to initalise. A empty menu will be created this scene");
 
 				OptionsMenu optionsMenu = new GameObject("Dummy Options Menu", new Type[]{typeof(OptionsMenu)}).GetComponent<OptionsMenu>();
-				optionsMenu.Init(title, null, null, null);
+				optionsMenu.Init(id, null, null, null);
 
 				return optionsMenu;
 			}
@@ -354,7 +374,7 @@ namespace ULTRAINTERFACE {
 			}
 
 			foreach (OptionsMenu menu in Resources.FindObjectsOfTypeAll<OptionsMenu>()) {
-				GameObject.Destroy(GameObject.Find(menu.gameObject.name.Replace(" Options", "")));
+				GameObject.Destroy(menu.OptionsButton.gameObject);
 				GameObject.Destroy(menu.gameObject);
 			}
 		}
@@ -391,9 +411,15 @@ namespace ULTRAINTERFACE {
 	}
 
 	public class OptionsMenu : MonoBehaviour {
-		public OptionsMenuEvents Events { 
+		public OptionsMenuCreateInfo CreateInfo { 
 			get {
 				return Options.RegisteredMenus[ID];
+			}
+		}
+
+		public OptionsMenuCreateInfo.OptionsMenuEvents Events { 
+			get {
+				return CreateInfo.Events;
 			}
 		}
 
@@ -466,18 +492,16 @@ namespace ULTRAINTERFACE {
 
 		public void SetTitle(string titleText, bool forceCaps = true) {
 			if (forceCaps) titleText = titleText.ToUpper();
-			if (Options.RegisteredMenus.ContainsKey(titleText)) {
-				UI.Log.LogError($"Failed to change options title from \"{ID}\" to \"{titleText}\". Option \"{titleText}\" Already exists");
-				return;
-			}
-			
-			OptionsButton.GetComponentInChildren<Text>().text = titleText;
+
+			CreateInfo.Title = titleText;
 			Title.text = $"--{titleText}--";
+		}
 
-			Options.RegisteredMenus.Add(titleText, Events);
-			Options.RegisteredMenus.Remove(ID);
+		public void SetButtonText(string buttonText, bool forceCaps = true) {
+			if (forceCaps) buttonText = buttonText.ToUpper();
 
-			ID = titleText;
+			CreateInfo.ButtonText = buttonText;
+			OptionsButton.GetComponentInChildren<Text>().text = buttonText;
 		}
 
 		void OnEnable() {
@@ -494,10 +518,23 @@ namespace ULTRAINTERFACE {
 	}
 
 	// This is a class simply because the constructer wasnt running for some reason
-	public class OptionsMenuEvents {
-		public List<Action<OptionsMenu>> Create = new List<Action<OptionsMenu>>();
-		public List<Action<OptionsMenu>> LateCreate = new List<Action<OptionsMenu>>();
-		public List<Action<OptionsMenu>> FirstShown = new List<Action<OptionsMenu>>();
+	public class OptionsMenuCreateInfo {
+		public class OptionsMenuEvents {
+			public List<Action<OptionsMenu>> Create = new List<Action<OptionsMenu>>();
+			public List<Action<OptionsMenu>> LateCreate = new List<Action<OptionsMenu>>();
+			public List<Action<OptionsMenu>> FirstShown = new List<Action<OptionsMenu>>();
+		}
+
+		public string ID;
+		public string Title;
+		public string ButtonText;
+		public OptionsMenuEvents Events = new OptionsMenuEvents();
+
+		public OptionsMenuCreateInfo(string id, string title, string buttonText) {
+			ID = id;
+			Title = title;
+			ButtonText = buttonText;
+		}
 	}
 
 	// This is simply used for gamepad selection

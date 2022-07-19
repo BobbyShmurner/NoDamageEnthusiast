@@ -38,7 +38,7 @@ namespace NoDamageEnthusiast
             Plugin.Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
 
             // This is just a temporary solution until I add proper settings UI
-            OptionsMenu optionsMenu = Options.CreateOptionsMenu("No Damage", (menu) => {
+            OptionsMenu optionsMenu = Options.CreateOptionsMenu("No Damage Enthusiast", (menu) => {
                 UI.CreateText(menu.ScrollView.Content, "Please excuse the shitty UI, it will improve eventually", 20, 600);
                 UI.CreateText(menu.ScrollView.Content, "Maybe...", 20);
 
@@ -59,7 +59,7 @@ namespace NoDamageEnthusiast
                 noCheckpointsButton.gameObject.AddComponent<BackSelectOverride>().Selectable = menu.OptionsButton;
 
                 UI.Log.LogInfo($"Created menu");
-            });
+            }, "No Damage");
         }
 
         private void OnDestroy()
