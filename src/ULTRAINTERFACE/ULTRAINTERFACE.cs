@@ -95,6 +95,8 @@ namespace ULTRAINTERFACE {
 			}
 
 			Text buttonText = buttonGO.GetComponentInChildren<Text>();
+			buttonText.horizontalOverflow = HorizontalWrapMode.Overflow;
+			buttonText.verticalOverflow = VerticalWrapMode.Overflow;
 			buttonText.text = text;
 			
 			buttonGO.AddComponent<SelectableUI>();
@@ -117,6 +119,9 @@ namespace ULTRAINTERFACE {
 			text.fontSize = fontSize;
 			text.text = displayText;
 			text.alignment = anchor;
+
+			text.horizontalOverflow = HorizontalWrapMode.Overflow;
+			text.verticalOverflow = VerticalWrapMode.Overflow;
 
 			return text;
 		}
