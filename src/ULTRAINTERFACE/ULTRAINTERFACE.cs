@@ -159,6 +159,7 @@ namespace ULTRAINTERFACE {
 				optionsScrollRect.anchorMax = new Vector2(0, 0.5f);
 				optionsScrollRect.pivot = new Vector2(0, 0.5f);
 				optionsScrollRect.anchoredPosition = new Vector3(20, 0, 3);
+				optionsScrollRect.SetAsFirstSibling();
 
 				// Move Buttons to the scroll view
 				Options.MoveOptionToOptionScroll("Gameplay");
